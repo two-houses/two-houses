@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Ensures mobile browsers scale properly -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TWO ACID HOUSES</title>
+
+    <!-- Preload fonts (only done once) -->
+    <link
+      rel="preload"
+      href="fonts/Wavehaus-158ExtraBold.otf"
+      as="font"
+      type="font/otf"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      href="fonts/Wavehaus-42Light.otf"
+      as="font"
+      type="font/otf"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      href="fonts/Wavehaus-28Thin.otf"
+      as="font"
+      type="font/otf"
+      crossorigin="anonymous"
+    />
+
+    <!-- Load p5.js once -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+
+    <style>
+      /* ----- FONTS ----- */
+      @font-face {
+        font-family: 'Wavehaus';
+        src: url('fonts/Wavehaus-158ExtraBold.otf') format('opentype');
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'WavehausLight';
+        src: url('fonts/Wavehaus-42Light.otf') format('opentype');
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Wavehaus28Thin';
+        src: url('fonts/Wavehaus-28Thin.otf') format('opentype');
+        font-display: swap;
+      }
+
+      /* ----- PAGE-WIDE STYLES & TRANSITIONS ----- */
+      body {
+        margin: 0;
+        /* Removed overflow: hidden so mobile can scroll if needed */
+        background-color: #fff;
+        font-family: 'WavehausLight', Arial, sans-serif;
+      }
+      .fadeable {
+        transition: opacity 0.8s ease;
+      }
+      .hidden {
+        display: none;
+      }
+      .invisible {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .page-container {
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+      }
+      #home-page,
+      #gallery-page {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+      }
+
+      /* LOADING OVERLAY */
+      #loader {
+        display: none; /* Hidden by default */
+        position: fixed;
+        z-index: 9999; /* Sit on top of everything else */
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.9);
+        align-items: center;
+        justify-content: center;
+      }
+      @keyframes gentlePulse {
+        0% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.9;
+          transform: scale(1.02);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .loading-text {
+        font-size: 24px;
+        color: #000;
+        animation: gentlePulse 5s infinite ease-in-out;
+        font-family: 'WavehausLight', Arial, sans-serif;
+        text-align: center;
+      }
+
+      /*---- Password Modal Styling ----- */
+      #update-text {
+        font-size: 20px;
+        font-family: 'WavehausLight', Arial, sans-serif;
+        margin-bottom: 15px;
+      }
+      #blinking-dot {
+        animation: blink 1s steps(2, start) infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      /* ----- HOME PAGE STYLES ----- */
+      #interactive-container-home {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 100;
+        background: transparent;
+      }
+      #static-top,
+      #static-bottom {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        font-size: 48px;
+        pointer-events: none;
+        color: black;
+      }
+      #static-top {
+        top: 10%;
+        line-height: 1.2;
+      }
+      #static-bottom {
+        top: 65%;
+      }
+      #home-ticker-top,
+  #home-ticker-bottom,
+  #gallery-ticker-top,
+  #gallery-ticker-bottom {
+    position: absolute;
+    width: 100%;
+    background-color: black;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    padding: calc(10px * var(--ticker-scale, 1)) 0;
+    z-index: 250;
+    color: white;
+    font-size: calc(20px * var(--ticker-scale, 1));
+  }
+
+  @media screen and (max-width: 600px) {
+    :root {
+      --ticker-scale: 0.8;
+    }
+  }
+
+  @media screen and (max-width: 400px) {
+    :root {
+      --ticker-scale: 0.6;
+    }
+  }
+
+      #home-ticker-top {
+        top: 0;
+      }
+      #home-ticker-bottom {
+        bottom: 0;
+      }
+      .ticker__wrap {
+        display: inline-block;
+      }
+      .ticker__wrap span {
+        margin-right: 50px;
+      }
+      #home-ticker-bottom .ticker__wrap {
+        animation: marquee 100s linear infinite;
+      }
+      #home-ticker-top .ticker__wrap {
+        animation: marquee 100s linear infinite reverse;
+      }
+
+      /* ----- GALLERY PAGE STYLES ----- */
+      body #gallery-page {
+        background: #fff;
+        color: black;
+        font-family: 'WavehausLight', sans-serif;
+      }
+      #gallery-ticker-top,
+      #gallery-ticker-bottom {
+        position: absolute;
+        width: 100%;
+        background-color: black;
+        overflow: hidden;
+        white-space: nowrap;
+        cursor: pointer;
+        padding: 10px 0;
+        z-index: 250;
+        font-size: 20px;
+        color: white;
+      }
+      #gallery-ticker-top {
+        top: 0;
+      }
+      #gallery-ticker-bottom {
+        bottom: 0;
+      }
+      #gallery-ticker-bottom .ticker__wrap {
+        animation: marquee 100s linear infinite;
+      }
+      #gallery-ticker-top .ticker__wrap {
+        animation: marquee 100s linear infinite reverse;
+      }
+      .nav-button {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 48px;
+        color: black;
+        cursor: pointer;
+        z-index: 300;
+        user-select: none;
+        padding: 10px;
+        background: transparent;
+      }
+      #nav-left {
+        left: 10px;
+      }
+      #nav-right {
+        right: 10px;
+      }
+      #interactive-container-gallery {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 100;
+      }
+      #audio-player {
+        position: absolute;
+        left: 50%;
+        transform: translate(-50%, -15px); 
+        z-index: 200;
+        color: black;
+        background: transparent;
+        text-align: center;
+        padding: 5px;
+      }
+      #audio-player button {
+        font-size: 24px;
+        color: black;
+        background: transparent;
+        border: 2px solid black;
+        border-radius: 5px;
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+      #audio-player input[type='range'] {
+        width: 100px;
+        margin-top: 5px;
+        background: transparent;
+        appearance: none;
+        -webkit-appearance: none;
+      }
+      #audio-player input[type='range']::-webkit-slider-runnable-track {
+        height: 8px;
+        background: grey;
+      }
+      #audio-player input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        background: black;
+        border-radius: 50%;
+        margin-top: -4px;
+      }
+      #audio-player input[type='range']::-moz-range-track {
+        height: 8px;
+        background: grey;
+      }
+      #audio-player input[type='range']::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: black;
+        border: none;
+        border-radius: 50%;
+      }
+
+      /* ----- MODAL (Password) & Additional Modals ----- */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 3000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-content {
+        position: relative;
+        max-width: 40%;
+        min-height: 250px;
+        padding: 40px 15px;
+        text-align: center;
+        font-family: 'WavehausLight', Arial, sans-serif;
+        background: black;
+        color: white;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content input[type='password'] {
+        padding: 10px;
+        font-size: 16px;
+        width: 80%;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 0;
+      }
+      .modal-content button {
+        padding: 10px 20px;
+        font-size: 16px;
+        font-family: 'Wavehaus28Thin', Arial, sans-serif;
+        cursor: pointer;
+        border: none;
+        border-radius: 0;
+        background: white;
+        color: #333;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      }
+      .close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 20px;
+        font-weight: thin;
+        color: #fff;
+        cursor: pointer;
+      }
+      @keyframes marquee {
+        0% {
+          transform: translateX(0%);
+        }
+        100% {
+          transform: translateX(-50%);
+        }
+      }
+
+      /* ----- Mobile Responsiveness ----- */
+      @media screen and (max-width: 600px) {
+        body {
+          overflow-x: hidden;
+        }
+        .page-container {
+          height: auto;
+          min-height: 100vh;
+          overflow: visible;
+        }
+
+        #static-top,
+        #static-bottom {
+          font-size: 32px;
+        }
+        #home-ticker-top,
+        #home-ticker-bottom,
+        #gallery-ticker-top,
+        #gallery-ticker-bottom {
+          font-size: 16px;
+          padding: 5px 0;
+        }
+        .modal-content {
+          max-width: 90%;
+          padding: 20px;
+        }
+        .modal-content input[type='password'],
+        .modal-content button {
+          font-size: 14px;
+          padding: 8px 12px;
+        }
+        .nav-button {
+          font-size: 36px;
+          padding: 8px;
+        }
+      }
+
+      /* --- Additional Styles for Audio Player Buttons --- */
+      .button-group {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+      }
+      .square-button {
+        width: 50px;
+        height: 50px;
+        padding: 0;
+        border: 2px solid black;
+        background: transparent;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .rotate-90 {
+        transform: rotate(90deg);
+      }
+      .rotate-180 {
+        transform: rotate(180deg);
+      }
+      .modal-content.inverse {
+        background: white;
+        color: black;
+      }
+      .modal-content.inverse p,
+      .modal-content.inverse a,
+      .modal-content.inverse span {
+        color: black;
+      }
+      .modal-content.inverse button {
+        background: white;
+        color: black;
+        border: 2px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- LOADING OVERLAY -->
+    <div id="loader">
+      <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- ============ HOME PAGE ============ -->
+    <div id="home-page" class="page-container fadeable">
+      <!-- Tickers (Safe Trip?) -->
+      <div id="home-ticker-top">
+        <div class="ticker__wrap">
+          <span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span>
+          <span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span>
+        </div>
+      </div>
+      <div id="home-ticker-bottom">
+        <div class="ticker__wrap">
+          <span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span
+          ><span>Safe Trip?</span>
+          <span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span
+            ><span>Safe Trip?</span>
+        </div>
+      </div>
+
+      <!-- Home p5 canvas -->
+      <div id="interactive-container-home"></div>
+
+      <!-- Static text -->
+      <div id="static-top">NEW<br>MURALS<br>FOR<br>TWO</div>
+      <div id="static-bottom">HOUSES</div>
+
+      <!-- Password Modal -->
+      <div id="password-modal" class="modal">
+        <div class="modal-content">
+          <span class="close" id="modal-close">&times;</span>
+          <div id="update-text">
+            Enter designated launch code...<span id="blinking-dot">.</span>
+          </div>
+          <br />
+          <input type="password" id="modal-password" placeholder="....." />
+          <br />
+          <button id="modal-submit">
+            ACTIVATE TRANSMISSION RELAY
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ GALLERY PAGE ============ -->
+    <div id="gallery-page" class="page-container fadeable invisible hidden">
+      <!-- Tickers (Level out?) -->
+      <div id="gallery-ticker-top">
+        <div class="ticker__wrap">
+          <span>Level out?</span
+          ><span>Level out?</span
+          ><span>Level out?</span
+          ><span>Level out?</span
+          ><span>Level out?</span
+          ><span>Level out?</span>
+        </div>
+      </div>
+      <div id="gallery-ticker-bottom">
+        <div class="ticker__wrap">
+          <span>Level out?</span
+          ><span>Level out?</span
+          ><span>Level out?</span
+          ><span>Level out?</span
+          ><span>Level out?</span
+          ><span>Level out?</span>
+        </div>
+      </div>
+
+      <!-- Gallery navigation arrows -->
+      <div id="nav-left" class="nav-button">&lt;</div>
+      <div id="nav-right" class="nav-button">&gt;</div>
+
+      <!-- Audio player -->
+      <div id="audio-player">
+        <audio id="my-audio" src="assets/NMTAH_Side_A.m4a"></audio>
+        <div class="button-group">
+          <!-- Play/Pause button -->
+          <button id="play-pause" class="square-button">►</button>
+          <!-- Centre button: opens download modal -->
+          <button id="download-90" class="square-button rotate-90">►</button>
+          <!-- Third button: opens placeholder modal -->
+          <button id="download-180" class="square-button rotate-180">►</button>
+        </div>
+        <br />
+        <input
+          type="range"
+          id="volume-control"
+          min="0"
+          max="1"
+          step="0.01"
+          value="1"
+        />
+      </div>
+
+      <!-- Gallery p5 canvas -->
+      <div id="interactive-container-gallery"></div>
+    </div>
+
+    <!-- ============ NEW MODALS ============ -->
+    <!-- Download Modal -->
+    <div id="download-modal" class="modal">
+      <div class="modal-content inverse">
+        <span class="close" id="download-modal-close">&times;</span>
+        <p>This is your full audio manifest. <br> Click the button below to download.</p>
+        <a href="assets/NMTAH_Side_A.wav" download="NMTAH_Side_A.wav">
+          <button>Download manifest</button>
+        </a>
+      </div>
+    </div>
+
+    <!-- Placeholder Modal -->
+    <div id="placeholder-modal" class="modal">
+      <div class="modal-content inverse">
+        <span class="close" id="placeholder-modal-close">&times;</span>
+        <p>Placeholder text. Replace this with your content later.</p>
+      </div>
+    </div>
+
+    <!-- ============ HOME PAGE P5 SKETCH ============ -->
+    <script>
+      let homeSketch = function (p) {
+        let textInput = "ACID",
+          letters = [],
+          trails = [],
+          maxTrailLength = 500,
+          customFont,
+          lastFrameRateCheck = 0,
+          spacing = 120;
+
+        p.preload = function () {
+          customFont = p.loadFont("fonts/Wavehaus-158ExtraBold.otf");
+        };
+
+        p.setup = function () {
+          let canvas = p.createCanvas(p.windowWidth, p.windowHeight);
+          canvas.parent("interactive-container-home");
+          p.textSize(160);
+          p.textAlign(p.CENTER, p.CENTER);
+          initializeLetters();
+        };
+
+        p.draw = function () {
+          p.clear();
+          if (p.millis() - lastFrameRateCheck > 1000) {
+            let fps = p.frameRate();
+            if (fps < 30) maxTrailLength = 300;
+            else if (fps > 50) maxTrailLength = 600;
+            lastFrameRateCheck = p.millis();
+          }
+          if (customFont && p.textFont() !== customFont) {
+            p.textFont(customFont);
+          } else if (!customFont) {
+            p.textFont("Arial");
+          }
+          for (let trail of trails) {
+            drawWavyText(
+              trail.x,
+              trail.y,
+              p.color(trail.color[0], trail.color[1], trail.color[2]),
+              trail.letter
+            );
+          }
+          for (let i = 0; i < letters.length; i++) {
+            let letter = textInput[i];
+            let letterPos = letters[i];
+            let distance = p.dist(p.mouseX, p.mouseY, letterPos.x, letterPos.y);
+            if (distance < 200) {
+              let angle = p.atan2(letterPos.y - p.mouseY, letterPos.x - p.mouseX);
+              let force = (200 - distance) ** 1.8 * 0.003;
+              letterPos.x += p.cos(angle) * force;
+              letterPos.y += p.sin(angle) * force;
+            }
+            letterPos.x += (letterPos.originalX - letterPos.x) * 0.02;
+            letterPos.y += (letterPos.originalY - letterPos.y) * 0.02;
+            trails.push({
+              x: letterPos.x - 10,
+              y: letterPos.y,
+              color: [0, 255, 0],
+              letter,
+            });
+            trails.push({
+              x: letterPos.x + 10,
+              y: letterPos.y,
+              color: [0, 0, 255],
+              letter,
+            });
+            if (trails.length > maxTrailLength) {
+              trails.splice(0, trails.length - maxTrailLength);
+            }
+            p.fill(0);
+            p.noStroke();
+            p.text(letter, letterPos.x, letterPos.y);
+          }
+        };
+
+        function drawWavyText(x, y, col, letter) {
+          p.fill(col);
+          p.noStroke();
+          p.text(letter, x, y);
+        }
+
+        function initializeLetters() {
+          letters = [];
+          let startX = p.windowWidth / 2 - ((textInput.length - 1) * spacing) / 2;
+          for (let i = 0; i < textInput.length; i++) {
+            let x = startX + i * spacing;
+            let y = p.windowHeight / 2;
+            letters.push({ x, y, originalX: x, originalY: y });
+          }
+        }
+
+        p.windowResized = function () {
+          p.resizeCanvas(p.windowWidth, p.windowHeight);
+          initializeLetters();
+        };
+      };
+
+      let homeP5 = new p5(homeSketch);
+    </script>
+
+    <!-- ============ GALLERY PAGE P5 SKETCH (Mural #1 original; Mural #2 responsive) ============ -->
+    <script>
+      let gallerySketch = function (p) {
+        let currentMural = 1;
+        let boxX, boxY, boxW, boxH;
+        let scaleFactor = 1; // Used only for Mural #2
+
+        // Mural #1 variables (original behavior)
+        let letters1 = [];
+        const fullText1 = "TWO ACID HOUSES";
+        let alignmentActive = false;
+        let nextSwitchTime = 0;
+
+        // Mural #2 variables (responsive scaling)
+        let letters2 = [];
+        const fullText2 = "TWO ACID HOUSES";
+
+        p.setup = function () {
+          p.createCanvas(p.windowWidth, p.windowHeight).parent("interactive-container-gallery");
+          p.textFont("WavehausLight");
+          // For Mural #1, use fixed text size
+          p.textSize(64);
+          p.textAlign(p.CENTER, p.CENTER);
+          updateBox();
+          initMural1(); // original mural #1 initialization
+          initMural2(); // responsive mural #2 initialization
+          nextSwitchTime = p.millis() + 8000;
+        };
+
+        p.draw = function () {
+          p.background(255);
+          p.noStroke();
+          p.fill(0);
+          p.rect(boxX, boxY, boxW, boxH);
+          p.stroke(255);
+          // Use fixed stroke weight for Mural #1; scaled for Mural #2
+          if (currentMural === 1) {
+            p.strokeWeight(2);
+          } else {
+            p.strokeWeight(2 * scaleFactor);
+          }
+          p.noFill();
+          p.rect(boxX, boxY, boxW, boxH);
+
+          if (currentMural === 1) {
+            // Mural #1: original behavior (fixed sizes)
+            if (p.millis() > nextSwitchTime) {
+              alignmentActive = !alignmentActive;
+              if (alignmentActive) {
+                computeAlignmentTargets();
+              } else {
+                for (let i = 0; i < letters1.length; i++) {
+                  letters1[i].dx = p.random(-1, 1);
+                  letters1[i].dy = p.random(-1, 1);
+                }
+              }
+              nextSwitchTime = p.millis() + (alignmentActive ? 20000 : 10000);
+            }
+            for (let obj of letters1) {
+              if (alignmentActive) {
+                obj.x = p.lerp(obj.x, obj.targetX, 0.006);
+                obj.y = p.lerp(obj.y, obj.targetY, 0.006);
+              } else {
+                obj.x += obj.dx;
+                obj.y += obj.dy;
+                if (obj.x < boxX) {
+                  obj.x = boxX;
+                  obj.dx *= -1;
+                }
+                if (obj.x > boxX + boxW) {
+                  obj.x = boxX + boxW;
+                  obj.dx *= -1;
+                }
+                if (obj.y < boxY) {
+                  obj.y = boxY;
+                  obj.dy *= -1;
+                }
+                if (obj.y > boxY + boxH) {
+                  obj.y = boxY + boxH;
+                  obj.dy *= -1;
+                }
+              }
+              p.fill(255);
+              p.noStroke();
+              p.text(obj.letter, obj.x, obj.y);
+            }
+            // Label for Mural #1 (fixed text size)
+            p.fill(0);
+            p.noStroke();
+            p.textSize(28);
+            p.textAlign(p.CENTER, p.BOTTOM);
+            p.text("MURAL001", boxX + boxW / 2, boxY - 10);
+          } else if (currentMural === 2) {
+            // Mural #2: responsive scaling using scaleFactor
+            let driftActivated = false;
+            if (
+              p.mouseX >= boxX &&
+              p.mouseX <= boxX + boxW &&
+              p.mouseY >= boxY &&
+              p.mouseY <= boxY + boxH
+            ) {
+              driftActivated = true;
+            }
+            for (let obj of letters2) {
+              if (driftActivated && p.abs(p.mouseX - obj.x) < 50 * scaleFactor) {
+                if (p.mouseY > obj.y) {
+                  obj.vOffset += 0.03;
+                } else if (p.mouseY < obj.y) {
+                  obj.vOffset -= 0.03;
+                }
+              } else {
+                obj.vOffset *= 0.98;
+                obj.offsetY = p.lerp(obj.offsetY, 0, 0.05);
+              }
+              obj.offsetY += obj.vOffset;
+              let upMax = obj.originalY - boxY;
+              let downMax = boxY + boxH - obj.originalY;
+              obj.offsetY = p.constrain(obj.offsetY, -upMax, downMax);
+              obj.y = obj.originalY + obj.offsetY;
+              p.fill(255);
+              p.noStroke();
+              p.text(obj.letter, obj.x, obj.y);
+            }
+            // Label for Mural #2 (scaled text size)
+            p.fill(0);
+            p.noStroke();
+            p.textSize(28 * scaleFactor);
+            p.textAlign(p.CENTER, p.BOTTOM);
+            p.text("MURAL002", boxX + boxW / 2, boxY - 10 * scaleFactor);
+          }
+          positionAudioPlayer();
+        };
+
+        p.windowResized = function () {
+          p.resizeCanvas(p.windowWidth, p.windowHeight);
+          // Recalculate scale factor only for Mural #2
+          scaleFactor = p.windowWidth / 1200;
+          // For Mural #1, text size remains fixed
+          updateBox();
+          initMural1();
+          initMural2();
+        };
+
+        function updateBox() {
+          boxW = p.width * 0.6;
+          boxH = p.height * 0.6;
+          boxX = (p.width - boxW) / 2;
+          boxY = (p.height - boxH) / 2;
+        }
+
+        function initMural1() {
+          // Original initialization for Mural #1
+          letters1 = [];
+          for (let char of fullText1) {
+            if (char === " ") continue;
+            letters1.push({
+              letter: char,
+              x: p.random(boxX, boxX + boxW),
+              y: p.random(boxY, boxY + boxH),
+              dx: p.random(-2, 2),
+              dy: p.random(-2, 2),
+              targetX: 0,
+              targetY: 0,
+            });
+          }
+        }
+
+        function computeAlignmentTargets() {
+          let words = [
+            { word: "TWO", startIndex: 0, targetY: boxY + boxH * 0.35 },
+            { word: "ACID", startIndex: 3, targetY: boxY + boxH * 0.5 },
+            { word: "HOUSES", startIndex: 7, targetY: boxY + boxH * 0.65 },
+          ];
+          for (let entry of words) {
+            let wordWidth = p.textWidth(entry.word);
+            let startX = boxX + (boxW - wordWidth) / 2;
+            let currentX = startX;
+            for (let i = 0; i < entry.word.length; i++) {
+              let letterWidth = p.textWidth(entry.word[i]);
+              let letterIndex = entry.startIndex + i;
+              if (letterIndex < letters1.length) {
+                letters1[letterIndex].targetX = currentX + letterWidth / 2;
+                letters1[letterIndex].targetY = entry.targetY;
+              }
+              currentX += letterWidth;
+            }
+          }
+        }
+
+        function initMural2() {
+          // Responsive initialization for Mural #2
+          letters2 = [];
+          let totalW = 0;
+          for (let ch of fullText2) {
+            totalW += p.textWidth(ch) * scaleFactor;
+          }
+          let staticY = boxY + boxH / 2;
+          let startX = boxX + (boxW - totalW) / 2;
+          let currentX = startX;
+          for (let i = 0; i < fullText2.length; i++) {
+            let ch = fullText2[i];
+            let w = p.textWidth(ch) * scaleFactor;
+            letters2.push({
+              letter: ch,
+              originalX: currentX + w / 2,
+              originalY: staticY,
+              offsetY: 0,
+              vOffset: 0,
+              x: currentX + w / 2,
+              y: staticY,
+            });
+            currentX += w;
+          }
+        }
+
+        function positionAudioPlayer() {
+          const ticker = document.getElementById("gallery-ticker-bottom");
+          const tickerHeight = ticker.offsetHeight;
+          const audioPlayer = document.getElementById("audio-player");
+          const bottomBlackBox = boxY + boxH;
+          const tickerTop = window.innerHeight - tickerHeight;
+          const verticalPos = (bottomBlackBox + tickerTop) / 2 - 30;
+          audioPlayer.style.top = verticalPos + "px";
+        }
+
+        // Navigation: When switching, reinitialize the corresponding mural.
+        window.switchMuralLeft = function () {
+          if (currentMural === 1) {
+            currentMural = 2;
+            initMural2();
+          } else {
+            currentMural = 1;
+            initMural1();
+          }
+        };
+        window.switchMuralRight = function () {
+          if (currentMural === 1) {
+            currentMural = 2;
+            initMural2();
+          } else {
+            currentMural = 1;
+            initMural1();
+          }
+        };
+      };
+
+      let galleryP5;
+    </script>
+
+    <!-- ============ SHARED JS LOGIC ============ -->
+    <script>
+      const homeTickerTop = document.getElementById("home-ticker-top");
+      const homeTickerBottom = document.getElementById("home-ticker-bottom");
+      const modal = document.getElementById("password-modal");
+      const modalClose = document.getElementById("modal-close");
+      const modalSubmit = document.getElementById("modal-submit");
+      const modalPassword = document.getElementById("modal-password");
+
+      homeTickerTop.addEventListener("click", openModal);
+      homeTickerBottom.addEventListener("click", openModal);
+
+      function openModal() {
+        modal.style.display = "flex";
+        modalPassword.value = "";
+        modalPassword.focus();
+      }
+      modalClose.addEventListener("click", () => {
+        modal.style.display = "none";
+      });
+      window.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          modal.style.display = "none";
+        }
+      });
+
+      const galleryTickerTop = document.getElementById("gallery-ticker-top");
+      const galleryTickerBottom = document.getElementById("gallery-ticker-bottom");
+      galleryTickerTop.addEventListener("click", showHome);
+      galleryTickerBottom.addEventListener("click", showHome);
+
+      const navLeft = document.getElementById("nav-left");
+      const navRight = document.getElementById("nav-right");
+      navLeft.addEventListener("click", () => {
+        window.switchMuralLeft();
+      });
+      navRight.addEventListener("click", () => {
+        window.switchMuralRight();
+      });
+      // Add touch support for mobile devices
+      navLeft.addEventListener("touchstart", () => {
+        window.switchMuralLeft();
+      });
+      navRight.addEventListener("touchstart", () => {
+        window.switchMuralRight();
+      });
+
+      const audio = document.getElementById("my-audio");
+      const playPauseBtn = document.getElementById("play-pause");
+      const volumeControl = document.getElementById("volume-control");
+      playPauseBtn.addEventListener("click", togglePlay);
+      volumeControl.addEventListener("input", function () {
+        audio.volume = this.value;
+      });
+
+      function togglePlay() {
+        if (audio.paused) {
+          audio.play();
+          playPauseBtn.textContent = "❚❚";
+        } else {
+          audio.pause();
+          playPauseBtn.textContent = "►";
+        }
+      }
+
+      // NEW MODAL LOGIC FOR DOWNLOAD AND PLACEHOLDER
+      const downloadModal = document.getElementById("download-modal");
+      const placeholderModal = document.getElementById("placeholder-modal");
+      const downloadButton = document.getElementById("download-90");
+      const placeholderButton = document.getElementById("download-180");
+      const downloadModalClose = document.getElementById("download-modal-close");
+      const placeholderModalClose = document.getElementById("placeholder-modal-close");
+
+      downloadButton.addEventListener("click", () => {
+        downloadModal.style.display = "flex";
+      });
+      placeholderButton.addEventListener("click", () => {
+        placeholderModal.style.display = "flex";
+      });
+
+      downloadModalClose.addEventListener("click", () => {
+        downloadModal.style.display = "none";
+      });
+      placeholderModalClose.addEventListener("click", () => {
+        placeholderModal.style.display = "none";
+      });
+
+      window.addEventListener("click", (e) => {
+        if (e.target === downloadModal) {
+          downloadModal.style.display = "none";
+        }
+        if (e.target === placeholderModal) {
+          placeholderModal.style.display = "none";
+        }
+      });
+
+      const homePage = document.getElementById("home-page");
+      const galleryPage = document.getElementById("gallery-page");
+      const loader = document.getElementById("loader");
+      const loaderText = document.querySelector("#loader .loading-text");
+
+      // Function to show/hide the loader with a given message
+      function showLoading(message) {
+        if (loader && loaderText) {
+          loaderText.innerHTML = message;
+          loader.style.display = "flex";
+        }
+      }
+      function hideLoading() {
+        if (loader) {
+          loader.style.display = "none";
+        }
+      }
+
+      // Button click for password
+      modalSubmit.addEventListener("click", () => {
+        const enteredPassword = modalPassword.value;
+        const correctPassword = "acid";
+        if (enteredPassword === correctPassword) {
+          modal.style.display = "none";
+          showGallery();
+        } else {
+          alert(
+            "ACCESS RESTRICTED: Launch code does not match records. Consult mission control documentation."
+          );
+        }
+      });
+
+      // Also allow pressing Enter in the password field
+      modalPassword.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          modalSubmit.click();
+        }
+      });
+
+      function showGallery() {
+        showLoading(
+          "TRANSMITTING ACTIVATION CODES TO NEAREST RELAY STATION....<br>PLEASE STAND BY"
+        );
+        homePage.classList.remove("invisible");
+        homePage.offsetWidth;
+        homePage.classList.add("invisible");
+
+        setTimeout(() => {
+          showLoading("ACCESS GRANTED");
+          setTimeout(() => {
+            homePage.classList.add("hidden");
+            galleryPage.classList.remove("hidden");
+            galleryPage.offsetWidth;
+            galleryPage.classList.remove("invisible");
+
+            if (!galleryP5) {
+              galleryP5 = new p5(gallerySketch);
+            } else {
+              galleryP5.resizeCanvas(window.innerWidth, window.innerHeight);
+            }
+
+            hideLoading();
+          }, 2000);
+        }, 3000);
+      }
+
+      function showHome() {
+        showLoading("Bringing you back down....");
+        galleryPage.classList.remove("invisible");
+        galleryPage.offsetWidth;
+        galleryPage.classList.add("invisible");
+
+        setTimeout(() => {
+          galleryPage.classList.add("hidden");
+          homePage.classList.remove("hidden");
+          homePage.offsetWidth;
+          homePage.classList.remove("invisible");
+          hideLoading();
+        }, 3000);
+      }
+    </script>
+  </body>
+</html>
